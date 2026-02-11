@@ -948,7 +948,7 @@ h1, h2 {
       });
     }
     
-    // ===== MUSIC PLAYER - FIXED FOR iOS =====
+    // ===== MUSIC PLAYER - FIXED FOR iOS ONLY =====
     const video = document.querySelector('.player-video');
     const playButton = document.getElementById('playButton');
     const playerVideo = document.querySelector('.player-video');
@@ -956,54 +956,44 @@ h1, h2 {
 
     let musicPlaying = false;
     let fadeInterval = null;
+    let isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
     // Ensure video shows preview frame
-    video.addEventListener('loadeddata', () => {
+    video.addEventListener('loadeddata', function() {
       video.currentTime = 0;
     });
 
-    // Force preview frame to show on iOS
-    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-      video.preload = 'metadata';
+    // iOS specific setup
+    if (isIOS) {
+      // Force video to load but stay paused
       video.load();
+      video.pause();
+      
+      // Add touchstart to video container to help iOS
+      document.querySelector('.player-container').addEventListener('touchstart', function(e) {
+        // This helps iOS recognize the video element
+      });
     }
 
     playButton.addEventListener('click', function() {
       if (!musicPlaying) {
         // ===== PLAY =====
         bgMusic.volume = 0.5;
-        bgMusic.play().catch(e => {
-          console.log("Music needs interaction");
-          playButton.textContent = "tap screen first";
-          
-          const enablePlay = function() {
-            bgMusic.play();
-            document.body.removeEventListener('click', enablePlay);
-            document.body.removeEventListener('touchstart', enablePlay);
-          };
-          
-          document.body.addEventListener('click', enablePlay, { once: true });
-          document.body.addEventListener('touchstart', enablePlay, { once: true });
-        });
+        
+        // iOS needs direct user interaction
+        if (isIOS) {
+          // Force play with user interaction
+          bgMusic.play();
+          playerVideo.play();
+        } else {
+          // Android - normal flow
+          bgMusic.play().catch(e => console.log("Music play error"));
+          playerVideo.play();
+        }
 
-        // iOS video play
         playerVideo.currentTime = 0;
         playerVideo.style.opacity = "1";
         playerVideo.style.filter = "blur(0px)";
-        
-        const playPromise = playerVideo.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            const retryVideo = function() {
-              playerVideo.play();
-              document.body.removeEventListener('click', retryVideo);
-              document.body.removeEventListener('touchstart', retryVideo);
-            };
-            document.body.addEventListener('click', retryVideo, { once: true });
-            document.body.addEventListener('touchstart', retryVideo, { once: true });
-          });
-        }
-        
         playerVideo.classList.add('playing');
 
         playButton.textContent = "⏸ stop";
@@ -1022,7 +1012,7 @@ h1, h2 {
 
     // ===== MUSIC FADE OUT =====
     function fadeOutMusic() {
-      fadeInterval = setInterval(() => {
+      fadeInterval = setInterval(function() {
         if (bgMusic.volume > 0.02) {
           bgMusic.volume -= 0.02;
         } else {
@@ -1042,12 +1032,12 @@ h1, h2 {
       playerVideo.style.opacity = "0.5";
       playerVideo.style.filter = "blur(4px) brightness(0.7)";
 
-      setTimeout(() => {
+      setTimeout(function() {
         playerVideo.pause();
         playerVideo.currentTime = 0;
         
-        // Force poster to show on iOS
-        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        // iOS specific - reload to show poster
+        if (isIOS) {
           playerVideo.load();
         }
         
